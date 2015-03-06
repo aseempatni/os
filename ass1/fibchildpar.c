@@ -7,8 +7,8 @@ void main () {
 	int i, returnStatus;    
 	int first = 0, second = 1, next;
 	for (i=1; i<=n; i++) {
-		int  pid;
-		pid = fork();
+		pid_t  pid;
+		pid = fork0();
 		if (pid == 0) {
 			if ( i==1 || i==2 )
 				next = 1;
@@ -26,3 +26,4 @@ void main () {
 		}
 	}
 }
+ 
