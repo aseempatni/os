@@ -20,8 +20,6 @@ int chatid;
 int idlist[CLIENT_SIZE];
 struct message buff;
 
-
-
 void parse_msg(char *buffer,char** args,size_t args_size, size_t *nargs)
 {
     char *buf_args[args_size]; /* You need C99 */
@@ -51,10 +49,11 @@ void parse_msg(char *buffer,char** args,size_t args_size, size_t *nargs)
 
 void displayList()
 {
-    printf("CHAT IDs:\n");
+    printf("CHAT IDs:\t");
     for(int i=0;i<CLIENT_SIZE;i++)
         if(idlist[i]!=-1)
-            printf("%d\n",idlist[i]);
+            printf("%d\t",idlist[i]);
+    printf("\n");
 }
 
 void printargs(char *args[ARR_SIZE]) {
@@ -74,13 +73,13 @@ int analyse_msg()
     { // Update client list
         for(int i=1;i<nargs;i++)
             idlist[i-1]=atoi(args[i]);
-        printf("Client list updated.\n");
-        displayList();
+        printf("=== Client list update\n");
+        // displayList();
         return 0;
     }
     if(!strcmp(args[0],"MSG"))
     { // f it is a chat message, show the message, sender and time of message
-        printf("Got new message. Hurray!!\n");
+        printf("=== New message\n");
         printf(" %s: \t%s \n %s\n", args[3], args[1],args[2]);
         // printargs(args);
         return 1;
@@ -113,13 +112,7 @@ void init_chat()
         printf("error\n");
         exit(1);
     }
-    if(msgrcv(iddown,&buff,BUFFER_SIZE,chatid,0)==-1)     //Kernel to user memory space 
-    {   
-        perror("msgrv failed\n");
-        exit(1);
-    }
-    // printf("Mq:%s\n",buff.mtext);
-    analyse_msg();
+    // printf("\n<= %s\n",buff.mtext);
 }
 
 int main()
@@ -129,10 +122,19 @@ int main()
     int recid;
     while(1)
     {
-        printf("Entered\n");
+        // retrieve a message from message queue
+        if(msgrcv(iddown,&buff,BUFFER_SIZE,chatid,0)==-1)     //Kernel to user memory space 
+        {   
+            perror("msgrv failed\n");
+            exit(1);
+        }
+        printf("\n<= %s\n",buff.mtext);
+        analyse_msg();
+        // printf("Entered\n");
+
         // show list of clients
         displayList();
-        printf("Send Message(y/n): ");
+        printf("\nSend Message(y/n): ");
         scanf("%*c%c",&op);
         if(op=='y')
         {
@@ -146,13 +148,6 @@ int main()
             // send the message using communication protocol
             sendMsg(recid);
         }
-        // retrieve a message from message queue
-        if(msgrcv(iddown,&buff,BUFFER_SIZE,chatid,0)==-1)     //Kernel to user memory space 
-        {   
-            perror("msgrv failed\n");
-            exit(1);
-        }
-        printf("Msg: %s\n",buff.mtext);
-        analyse_msg();
+
     }
 }

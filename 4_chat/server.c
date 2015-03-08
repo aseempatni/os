@@ -18,6 +18,7 @@ key_t down = 132;
 int idup;
 int iddown;
 int map[100][2];
+
 struct message msg;
 
 int nclient() {
@@ -174,7 +175,7 @@ int analyse_msg()
     {
         printf("=== New Client\n");
         addClient(sender_pid(),atoi(args[1]));
-        printf("Total clients: %d\n", nclient());
+        printf(" Total clients: %d\n", nclient());
         sendList();
         return 0;
     }
@@ -207,11 +208,11 @@ int main()
     while(1)
     {
         if(msgrcv(idup,&msg,BUFFER_SIZE,0,0)==-1)     //Kernel to user memory space 
-        {   
+        {
             perror("msgrv failed\n");
             exit(1);
         }
-        printf("<= %s\n",msg.mtext);
+        printf("\n<= %s\n",msg.mtext);
         analyse_msg();
     }
 }
