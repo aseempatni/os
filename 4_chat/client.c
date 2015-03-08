@@ -3,6 +3,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <string.h>
+#include <unistd.h>
 #define BUFFER_SIZE 1000
 #define ARR_SIZE 100
 #define CLIENT_SIZE 10
@@ -16,9 +17,10 @@ key_t up = 131;
 key_t down = 132;
 int idup;
 int iddown;
-int chatid;
+char chatid[20];
 int idlist[CLIENT_SIZE];
 struct message buff;
+char chatID[100][20];
 
 void parse_msg(char *buffer,char** args,size_t args_size, size_t *nargs)
 {
@@ -46,13 +48,12 @@ void parse_msg(char *buffer,char** args,size_t args_size, size_t *nargs)
     *nargs=j;
     args[j]=NULL;
 }
-
+int client_count;
 void displayList()
 {
     printf("CHAT IDs:\t");
-    for(int i=0;i<CLIENT_SIZE;i++)
-        if(idlist[i]!=-1)
-            printf("%d\t",idlist[i]);
+    for(int i=0;i<client_count-1;i++)
+        printf("%s\t",chatID[i]);
     printf("\n");
 }
 
@@ -71,8 +72,10 @@ int analyse_msg()
     
     if(!strcmp(args[0],"LIST"))
     { // Update client list
+        client_count = nargs;
         for(int i=1;i<nargs;i++)
-            idlist[i-1]=atoi(args[i]);
+            strcpy(chatID[i-1],args[i]);
+            // idlist[i-1]=atoi(args[i]);
         printf("=== Client list update\n");
         // displayList();
         return 0;
@@ -86,9 +89,9 @@ int analyse_msg()
     }
 }
 
-void sendMsg(int recid)
+void sendMsg(char* recid)
 {
-    sprintf(buff.mtext,"MSG<%s><%d>",temp,recid);
+    sprintf(buff.mtext,"MSG<%s><%s>",temp,recid);
     printf("=> %s\n", buff.mtext);
     if(msgsnd(idup,&buff,strlen(buff.mtext),0)==-1)
     {
@@ -101,13 +104,13 @@ void init_chat()
 {
     idup=msgget(up,IPC_CREAT|0666);
     iddown=msgget(down,IPC_CREAT|0666);
-    for(int i=0;i<CLIENT_SIZE;i++)
-        idlist[i]=-1;
+    // for(int i=0;i<CLIENT_SIZE;i++)
+    //     idlist[i]=-1;
     printf("Register with ChatID: ");
-    scanf("%d",&chatid);
+    scanf("%s",chatid);
     strcpy(buff.mtext,"");
-    sprintf(buff.mtext,"NEW<%d>",chatid);
-    buff.mtype=chatid;
+    sprintf(buff.mtext,"NEW<%s>",chatid);
+    buff.mtype=getpid();
     if(msgsnd(idup,&buff,strlen(buff.mtext),0)==-1)
     {
         printf("error\n");
@@ -120,11 +123,11 @@ int main()
 {
     init_chat();
     char op;
-    int recid;
+    char recid[20];
     while(1)
     {
         // retrieve a message from message queue
-        if(msgrcv(iddown,&buff,BUFFER_SIZE,chatid,0)==-1)     //Kernel to user memory space 
+        if(msgrcv(iddown,&buff,BUFFER_SIZE,getpid(),0)==-1)     //Kernel to user memory space 
         {   
             perror("msgrv failed\n");
             exit(1);
@@ -142,7 +145,7 @@ int main()
             displayList();
             // ask user to pick a client
             printf("Pick Client: ");
-            scanf("%d",&recid);
+            scanf("%s",recid);
             // ask user to type a message
             printf("Enter Message:\n");
             scanf("%s",temp);

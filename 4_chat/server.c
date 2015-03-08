@@ -18,6 +18,7 @@ key_t down = 132;
 int idup;
 int iddown;
 int map[100][2];
+char chatID[100][20];
 
 struct message msg;
 
@@ -52,14 +53,14 @@ int sender_pid()
     return qstat.msg_lspid;
 }
 
-int sender_chatid ()
+char* sender_chatid ()
 {
     int pid = sender_pid();
     for(int i=0;i<CLIENT_SIZE;i++)
     {
         if(map[i][0]==pid)
         {
-            return map[i][1];
+            return chatID[i];
         }
     }
 }
@@ -78,19 +79,33 @@ void get_msg_time(char* buff)
 }
 
 //* registration
-int addClient(int pid,int chatid)
+int addClient(int pid,char* chatid)
 {
     for(int i=0;i<CLIENT_SIZE;i++)
     {
-        if(map[i][0]==-1 || map[i][1]==chatid)
+        if(map[i][0]==-1 || strcmp(chatID[i],chatid)==0 )
         {
             map[i][0]=pid;
-            map[i][1]=chatid;
-            printf(" Chat ID: %d \n PID: %d\n", chatid,pid);
+            map[i][1]=atoi(chatid);
+            strcpy (chatID[i],chatid);
+            printf(" Chat ID: %s \n PID: %d\n", chatid,pid);
             return 1;
         }
     }
     return -1;
+}
+
+void disp_clients() {
+    printf("Chat IDs: \n");
+    for(int i=0;i<CLIENT_SIZE;i++)
+    {
+        printf("%s\t",chatID[i] ); 
+        if(map[i][0]==-1)
+        {
+            break;
+        }
+    }
+    printf("\n");
 }
 
 void sendList()
@@ -100,14 +115,14 @@ void sendList()
     for(int i=0;i<CLIENT_SIZE;i++)
         if(map[i][0]!=-1)
         {
-            sprintf(temp,"<%d>",map[i][1]);
+            sprintf(temp,"<%s>",chatID[i]);
             strcat(msg.mtext,temp);
         }
     for(int i=0;i<CLIENT_SIZE;i++)
     {
         if(map[i][0]!=-1)
         {
-            msg.mtype=map[i][1];
+            msg.mtype=map[i][0];
             if(msgsnd(iddown,&msg,strlen(msg.mtext),0)==-1)
             {
                 printf("error\n");
@@ -162,9 +177,9 @@ void printargs(char *args[ARR_SIZE]) {
     printf("arg 2 = %s\n", args[2]);
     printf("arg 3 = %s\n", args[3]);
 }
-void relayMsg(int chatid)
+void relayMsg(int pid)
 {
-    msg.mtype=chatid;
+    msg.mtype=pid;
     if(msgsnd(iddown,&msg,strlen(msg.mtext),0)==-1)
     {
         printf("error\n");
@@ -181,7 +196,7 @@ int analyse_msg()
     if(!strcmp(args[0],"NEW"))
     { // when a client joins, display new client's chat ID (described below) and process ID, total number of clients
         printf("=== New Client\n");
-        addClient(sender_pid(),atoi(args[1]));
+        addClient(sender_pid(),args[1]);
         printf(" Total clients: %d\n", nclient());
         sendList();
         return 0;
@@ -189,21 +204,28 @@ int analyse_msg()
     if(!strcmp(args[0],"MSG"))
     {
         printf("=== New Message\n");
-        printf(" From: %d \n To: %d \n Message: %s\n", sender_chatid(), atoi(args[2]), args[1]);
+        printf(" From: %s \n To: %s \n Message: %s\n", sender_chatid(), args[2], args[1]);
         char time_msg[20];
         get_msg_time(time_msg);
         // printargs(args);
         addTime();
+        int i=0;
         int to = atoi(args[2]);
+        while(map[i][0]!=-1 && strcmp(chatID[i],args[2])!=0) i++;
+        if ( map[i][0]==-1) 
+            printf("Reciever not found.\n");
+        else {
+
+        }
 
         // Add message
         sprintf(msg.mtext,"MSG<%s>",args[1]);
 
         // Add time and sender chatID
-        sprintf(temp,"<%s><%d>",time_msg, sender_chatid());
+        sprintf(temp,"<%s><%s>",time_msg, sender_chatid());
         strcat(msg.mtext,temp);
         printf("=> %s to %d\n", msg.mtext,to);
-        relayMsg(to);
+        relayMsg(map[i][0]);
         qsize();
         return 1;
     }
@@ -222,5 +244,6 @@ int main()
         }
         printf("\n<= %s\n",msg.mtext);
         analyse_msg();
+        disp_clients();
     }
 }
