@@ -149,6 +149,13 @@ void addTime()
 
 }
 
+int qsize () {
+    struct msqid_ds buf;
+    int rc = msgctl(iddown, IPC_STAT, &buf);
+    uint msg = (uint)(buf.msg_qnum);
+    printf("# messages in queue: %u\n", msg);
+}
+
 void printargs(char *args[ARR_SIZE]) {
     printf("arg 0 = %s\n", args[0]);
     printf("arg 1 = %s\n", args[1]);
@@ -172,7 +179,7 @@ int analyse_msg()
     size_t nargs;
     parse_msg(msg.mtext,args,ARR_SIZE,&nargs);
     if(!strcmp(args[0],"NEW"))
-    {
+    { // when a client joins, display new client's chat ID (described below) and process ID, total number of clients
         printf("=== New Client\n");
         addClient(sender_pid(),atoi(args[1]));
         printf(" Total clients: %d\n", nclient());
@@ -197,6 +204,7 @@ int analyse_msg()
         strcat(msg.mtext,temp);
         printf("=> %s to %d\n", msg.mtext,to);
         relayMsg(to);
+        qsize();
         return 1;
     }
 }

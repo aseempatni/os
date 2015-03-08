@@ -89,6 +89,7 @@ int analyse_msg()
 void sendMsg(int recid)
 {
     sprintf(buff.mtext,"MSG<%s><%d>",temp,recid);
+    printf("=> %s\n", buff.mtext);
     if(msgsnd(idup,&buff,strlen(buff.mtext),0)==-1)
     {
         printf("error\n");
