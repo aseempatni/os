@@ -148,7 +148,7 @@ int main()
             scanf("%s",recid);
             // ask user to type a message
             printf("Enter Message:\n");
-            scanf("%s",temp);
+            scanf("\n%[^\n]s",temp);
             // send the message using communication protocol
             sendMsg(recid);
         }

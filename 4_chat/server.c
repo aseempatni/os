@@ -96,7 +96,7 @@ int addClient(int pid,char* chatid)
 }
 
 void disp_clients() {
-    printf("Chat IDs: \n");
+    printf("Chat IDs: \t");
     for(int i=0;i<CLIENT_SIZE;i++)
     {
         printf("%s\t",chatID[i] ); 
@@ -209,8 +209,11 @@ int analyse_msg()
         get_msg_time(time_msg);
         // printargs(args);
         addTime();
+        char to[20];
+        strcpy(to,args[2]);
+
+        // find receivers's pid
         int i=0;
-        int to = atoi(args[2]);
         while(map[i][0]!=-1 && strcmp(chatID[i],args[2])!=0) i++;
         if ( map[i][0]==-1) 
             printf("Reciever not found.\n");
@@ -224,7 +227,7 @@ int analyse_msg()
         // Add time and sender chatID
         sprintf(temp,"<%s><%s>",time_msg, sender_chatid());
         strcat(msg.mtext,temp);
-        printf("=> %s to %d\n", msg.mtext,to);
+        printf("=> %s to %s\n", msg.mtext,to);
         relayMsg(map[i][0]);
         qsize();
         return 1;
