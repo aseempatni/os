@@ -31,7 +31,6 @@ int genRandom()
 
 void init()
 {
-    srand(time(NULL));
     semid = semget(key,50,0666|IPC_CREAT);
 }
 
@@ -59,11 +58,19 @@ int getCount(int num,int pitid)
 int main(void)
 {
     init();
-
+    int n,i,ate=1,pitid;
+    printf("Enter the number of Jackals: ");
+    scanf("%d",&n);
+    for(i=0;i<n;i++)
+    {
+        if(fork())
+            break;
+    }
+    srand(time(NULL));
     while(1)
     {
-        int ate=0;
-        int pitid = genRandom();
+        if(ate) pitid = genRandom(),ate=0;
+        else pitid = pitid%3+1;
 
         // increase animal inside
         down(MUTEX_COUNT,pitid);
@@ -87,7 +94,7 @@ int main(void)
         }
         printf("Jackal: Food left %d\n",semctl(semid,N*(pitid-1)+FOOD,GETVAL,0));
         up(MUTEX_FOOD,pitid);
-        getchar();
+        //getchar();
 
         // decrease animal inside
         down(MUTEX_COUNT,pitid);
