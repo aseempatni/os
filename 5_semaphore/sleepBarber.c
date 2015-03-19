@@ -1,8 +1,8 @@
 /*
- * SleepBarber.c
+ *  SleepBarber.c
  *
  *   Compile with:
- *	cc sleepBarber.c -o SleepBarber -lpthread -lm
+ *	cc sleepBarber.c -o sleepBarber -lpthread -lm
  */
 
 #define _REENTRANT
@@ -13,6 +13,8 @@
 
 #include <pthread.h>
 #include <semaphore.h>
+
+#include <sys/errno.h>
 
 // The maximum number of customer threads.
 #define MAX_CUSTOMERS 25
@@ -120,7 +122,11 @@ void *customer(void *number) {
     printf("Customer %d arrived at barber shop.\n", num);
 
     // Wait for space to open up in the waiting room...
-    sem_wait(&waitingRoom);
+    if (sem_trywait(&waitingRoom) == -1) {
+        printf("Waiting room full. Customer %d is leaving.\n",num);
+        return 0;
+    }
+
     printf("Customer %d entering waiting room.\n", num);
 
     // Wait for the barber chair to become free.
