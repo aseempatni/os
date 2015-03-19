@@ -7,15 +7,25 @@
 #include <sys/sem.h>
 #include <time.h>
 
-#define MAX_RETRIES 10
+#define N 8
+#define PIT 0
+#define LION 1
+#define JACKAL 2
+#define FOOD 3
+#define LION_FOOD_LOCK 4
+#define LION_COUNT_LOCK 5
+#define JACKAL_FOOD_LOCK 6
+#define JACKAL_COUNT_LOCK 7
+#define ANIMAL LION
+#define MUTEX_FOOD LION_FOOD_LOCK
+#define MUTEX_COUNT LION_COUNT_LOCK
 
-key_t key=20;
-int semid,pitid;
+key_t key=21;
+int semid,pitid,val;
 struct sembuf sb;
 
 int genRandom()
 {
-    srand(time(NULL));
     return rand()%3+1;
 }
 
@@ -25,37 +35,62 @@ union semun {
     ushort *array;
 };
 
-int main(void)
+void up(int num,int pitid)
 {
-    semid = semget(key,3,0666|IPC_CREAT);
+    sb.sem_op = 1;
+    sb.sem_flg = 0;
+    sb.sem_num = N*(pitid-1)+num;
+    semop(semid, &sb, 1);
+}
 
+void down(int num,int pitid)
+{
+    sb.sem_op = -1;
+    sb.sem_flg = 0;
+    sb.sem_num = N*(pitid-1)+num;
+    semop(semid, &sb, 1);
+}
+
+int getCount(int num,int pitid)
+{
+    return semctl(semid,N*(pitid-1)+num,GETVAL,0);
+}
+
+void init()
+{
+    srand(time(NULL));
+    semid = semget(key,50,0666|IPC_CREAT);
+    int i;
+    for(i=0;i<50;i++)
+        semctl(semid,i,SETVAL,1);
+    for(i=0;i<3;i++)
+    {
+        semctl(semid,N*i+FOOD,SETVAL,0);
+        semctl(semid,N*i+LION,SETVAL,0);
+        semctl(semid,N*i+JACKAL,SETVAL,0);
+    }
+}
+
+int main()
+{
+    init();
     while(1)
     {
         /* check if pit not occupied */
         pitid = genRandom();
-
-        sb.sem_op = -1;
-        sb.sem_flg = 0;
-        sb.sem_num = 2*(pitid-1)+1;
-        // check if pit occupied
-        semop(semid, &sb, 1);
-
-
-        /* CR */
-        // ranger in
-
-        if(semctl(semid,2*(pitid-1)+2,GETVAL,0)<10)
+        printf("Ranger: Entering Pit %d\n",pitid);
+        down(PIT,pitid);
+        printf("Ranger: Lock %d:%d\n",pitid,getCount(PIT,pitid));
+        if((val = semctl(semid,N*(pitid-1)+FOOD,GETVAL,0))<=40)
         {
-            printf("Filling %d pit with food\n",sb.sem_num);
-            semctl(semid,2*(pitid-1)+2,SETVAL,10);
+            printf("Ranger: Filling %d pit.Total %d food\n",pitid,val+10);
+            semctl(semid,N*(pitid-1)+FOOD,SETVAL,val+10);
         }
 
-        // unoccupy pit
-        sb.sem_op = 1;
-        semop(semid, &sb, 1);
+        up(PIT,pitid);
+        //getchar();
     }
 
     printf("Unlocked\n");
-
     return 0;
 }
