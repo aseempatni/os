@@ -58,16 +58,18 @@ int getCount(int num,int pitid)
 int main(void)
 {
     init();
-    int n,i,ate=1,pitid;
+    int n,m,i,ate=1,pitid;
     printf("Enter the number of Lions: ");
     scanf("%d",&n);
+    printf("Enter the number of Iterations: ");
+    scanf("%d",&m);
     for(i=0;i<n;i++)
     {
         if(fork())
             break;
     }
     srand(time(NULL));
-    while(1)
+    while(m--)
     {
         if(ate) pitid = genRandom(),ate=0;
         else pitid = pitid%3+1;
