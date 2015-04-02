@@ -1,0 +1,180 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
+#include <time.h>
+#include <fcntl.h>
+#include <utmp.h>
+#include <pwd.h>
+#include <signal.h>
+
+#define BUFFER_SIZE 1024
+#define sem1 0
+#define sem2 1
+
+struct message
+{
+        long mtype;
+        char mtext[BUFFER_SIZE];
+};
+struct sembuf sb;
+
+char buffer[BUFFER_SIZE];
+struct message msgmq;
+key_t broad_key=31,array_key=32,msg_key=33,sem_key=34;
+int mqid,asid,msid,semid;
+int* pidarr;
+char *msgshm;
+
+void lock(int num)
+{
+    sb.sem_op = -1;
+    sb.sem_flg = 0;
+    sb.sem_num = num;
+    if(num==sem2)
+        sb.sem_op = 0;
+    semop(semid, &sb, 1);
+}
+
+void unlock(int num)
+{
+    sb.sem_op = 1;
+    sb.sem_flg = 0;
+    sb.sem_num = num;
+    semop(semid, &sb, 1);
+}
+
+void init()
+{
+    mqid = msgget(broad_key,IPC_CREAT|0666);
+    asid = shmget(array_key,500,IPC_CREAT|0666);
+    msid = shmget(msg_key,5000,IPC_CREAT|0666);
+    semid = semget(sem_key,2,IPC_CREAT|0666);
+    pidarr = (int*)shmat(asid,NULL,0);
+    msgshm = (char*)shmat(msid,NULL,0);
+    printf("Device (pid: %d)\n",getpid());
+}
+
+void tokenize(char *str,char** tok)
+{
+    char * pch;
+    pch = strtok (str,"/:");
+    int i=0;
+    while (pch != NULL)
+    {
+        if(strlen(pch)>0)
+            tok[i++] = pch;
+        pch = strtok (NULL, "/:");
+    }
+    tok[i]=NULL;
+}
+
+void release()
+{
+    msgctl(mqid,IPC_RMID,NULL);
+    shmctl(asid,IPC_RMID,NULL);
+    shmctl(msid,IPC_RMID,NULL);
+    semctl(semid,0,IPC_RMID,0);
+    int idx,count=0;
+    lock(sem1);
+    for(int i=0;i<50;i++)
+        if(pidarr[i]!=-1)
+        {
+            count++;
+            if(pidarr[i]==getppid())
+                idx = i;
+        }
+    unlock(sem1);
+    strcpy(buffer,"*");
+    if(count==1)
+    {
+        lock(sem2);
+        strcpy(msgshm,buffer);
+        unlock(sem2);
+    }
+    exit(0);
+}
+
+void check()
+{
+    if( access( "ser.txt", F_OK ) == -1 ) {
+         printf("Server not initialized.\n");
+         return;
+    }
+}
+
+bool flag;
+void sendHandle(int sig)
+{
+    flag = true;
+    char temp[700];
+    printf("<Ctrl+C is pressed>\n");
+    printf("--- Enter a message:\n");
+    scanf("%s",temp);
+    if(!strcmp(temp,"bye"))
+        release();
+    sprintf(buffer,"%s/%d:%s",getlogin(),getppid(),temp);
+}
+
+void send()
+{
+    signal(SIGINT,sendHandle);
+    flag = false;
+    while(1)
+    {
+        if(!flag)
+            sprintf(buffer,".");
+        flag=false;
+
+        lock(sem2);
+        strcpy(msgshm,buffer);
+        unlock(sem2);
+    }
+}
+
+void addPPID()
+{
+    lock(sem1);
+    for(int i=0;i<50;i++)
+        if(pidarr[i]==-1)
+        {
+            pidarr[i]=getppid();
+            return;
+        }
+    unlock(sem1);
+}
+
+void ignore(int sig)
+{
+    return ;
+}
+
+void receive()
+{
+    signal(SIGINT,ignore);
+    addPPID();
+    while(1)
+    {
+        msgrcv(mqid,&msgmq,strlen(msgmq.mtext),1,0);
+        printf("--- Received message: %s\n",msgmq.mtext);
+    }
+}
+
+int main(int argc,char* argv[])
+{
+    signal(SIGINT,);
+    check();
+    init();
+    
+    if(fork())
+        send();
+    else
+        receive();
+}
