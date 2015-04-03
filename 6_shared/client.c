@@ -66,7 +66,7 @@ void printsem(int p)
 {
     int a = semctl(semid,sem1,GETVAL,0);
     int b = semctl(semid,sem2,GETVAL,0);
-    printf("%d sem1:%d sem2:%d\n",p,a,b);
+    //printf("%d sem1:%d sem2:%d\n",p,a,b);
 }
 
 void init()
