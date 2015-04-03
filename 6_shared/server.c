@@ -198,7 +198,7 @@ void broadcast(int expid)
     printf("Sending: %s\n",orig_message);
     for(int i=0;i<50;i++)
     {
-        if(pidarr[i]!=-1)// && pidarr[i]!=expid)
+        if(pidarr[i]!=-1 && pidarr[i]!=expid)
         {
             printf("--- Sending msg to pid %d\n",pidarr[i]);
             msgmq.mtype = pidarr[i];
