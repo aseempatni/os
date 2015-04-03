@@ -78,14 +78,14 @@ void printsem(int p)
 {
     int a = semctl(semid,sem1,GETVAL,0);
     int b = semctl(semid,sem2,GETVAL,0);
-    printf("%d 0:%d 1:%d\n",p,a,b);
+    //printf("%d 0:%d 1:%d\n",p,a,b);
 }
 
 void writepid()
 {
     int fd;
     // |O_EXCL
-    if((fd=open("ser.txt",O_CREAT|O_WRONLY,0666))==-1)
+    if((fd=open("ser.txt",O_CREAT|O_EXCL|O_WRONLY,0666))==-1)
         perror("Only one server can run.\n");
     printf("Opening File\n");
     sprintf(buffer,"%d",getpid());
