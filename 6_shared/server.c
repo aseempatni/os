@@ -172,6 +172,7 @@ void tokenize(char *str,char** tok)
 }
 
 char* msg[5];
+char orig_message[BUFFER_SIZE];
 int read_message()
 {
     printf("Stuck at sem2\n");
@@ -179,9 +180,10 @@ int read_message()
     lock(sem2);
     printsem(1);
     strcpy(buffer,msgshm);
-    printf("--- Received msg \"%s\"\n",buffer);
+    printf("--- Received message \"%s\"\n",buffer);
     unlock(sem2);
     printsem(2);
+    strcpy(orig_message,buffer);
     tokenize(buffer,msg);
     if(!strcmp(msg[0],"."))
         return 0;
@@ -192,16 +194,18 @@ int read_message()
 
 void broadcast(int expid)
 {
-    strcpy(msgmq.mtext,buffer);
+    strcpy(msgmq.mtext,orig_message);
+    printf("Sending: %s\n",orig_message);
     for(int i=0;i<50;i++)
     {
         if(pidarr[i]!=-1)// && pidarr[i]!=expid)
         {
+            printf("--- Sending msg to pid %d\n",pidarr[i]);
             msgmq.mtype = pidarr[i];
             msgsnd(mqid,&msgmq,strlen(msgmq.mtext),0);
         }
     }
-    getchar();
+    //getchar();
 }
 
 void release(int sig)
@@ -219,7 +223,6 @@ int main(int argc,char* argv[])
 {
     signal(SIGINT,release);
     init();
-    pidarr[0]=2;
     int nuser=argc;
     int result;
     char **user = &argv[1];
@@ -229,6 +232,7 @@ int main(int argc,char* argv[])
     {
         result = read_message();
         printf("Result %d\n",result);
+        //getchar();
         if(result==1)
             broadcast(atoi(msg[1]));
         if(result==-1)

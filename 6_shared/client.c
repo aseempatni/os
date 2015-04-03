@@ -66,7 +66,7 @@ void printsem(int p)
 {
     int a = semctl(semid,sem1,GETVAL,0);
     int b = semctl(semid,sem2,GETVAL,0);
-    //printf("%d sem1:%d sem2:%d\n",p,a,b);
+    printf("%d sem1:%d sem2:%d\n",p,a,b);
 }
 
 void init()
@@ -173,12 +173,13 @@ void send()
 
 void addPPID()
 {
+    printsem(5);
     lock(sem1);
     for(int i=0;i<50;i++)
         if(pidarr[i]==-1)
         {
             pidarr[i]=getppid();
-            return;
+            break;
         }
     unlock(sem1);
 }
@@ -194,7 +195,7 @@ void receive()
     addPPID();
     while(1)
     {
-        msgrcv(mqid,&msgmq,strlen(msgmq.mtext),getpid(),0);
+        msgrcv(mqid,&msgmq,sizeof(msgmq.mtext),getppid(),0);
         printf("--- Received message: %s\n",msgmq.mtext);
     }
 }
@@ -212,7 +213,7 @@ int main(int argc,char* argv[])
     check();
     init();
     
-    if(!fork())
+    if(fork())
         send();
     else
         receive();
