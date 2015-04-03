@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <utmp.h>
 #include <pwd.h>
+#include <signal.h>
 
 #define BUFFER_SIZE 1024
 #define sem1 0
@@ -30,7 +31,7 @@ struct message
         long mtype;
         char mtext[BUFFER_SIZE];
 };
-struct sembuf sb;
+struct sembuf *sb;
 
 char buffer[BUFFER_SIZE];
 struct message msgmq;
@@ -41,22 +42,43 @@ char *msgshm;
 
 void lock(int num)
 {
-    sb.sem_op = -1;
-    sb.sem_flg = 0;
-    sb.sem_num = num;
+    int nop;
+    sb[0].sem_flg = 0;
+    sb[0].sem_num = num;
+    sb[1].sem_flg = 0;
+    sb[1].sem_num = num;
+
+    sb[0].sem_op = -1;
+    nop = 1;
     if(num==sem2)
-        sb.sem_op = -2;
-    semop(semid, &sb, 1);
+    {
+        sb[0].sem_op = -2;
+        sb[1].sem_op = 2;
+        nop = 2;
+    }
+    semop(semid, sb, nop);
 }
 
 void unlock(int num)
 {
-    sb.sem_op = 1;
-    sb.sem_flg = 0;
-    sb.sem_num = num;
+    int nop;
+    sb[0].sem_flg = 0;
+    sb[0].sem_num = num;
+    sb[1].sem_flg = 0;
+    sb[1].sem_num = num;
+
+    sb[0].sem_op = 1;
+    nop = 1;
     if(num==sem2)
-        sb.sem_op = 2;
-    semop(semid, &sb, 1);
+        sb[0].sem_op = -2;
+    semop(semid, sb, nop);
+}
+
+void printsem(int p)
+{
+    int a = semctl(semid,sem1,GETVAL,0);
+    int b = semctl(semid,sem2,GETVAL,0);
+    printf("%d 0:%d 1:%d\n",p,a,b);
 }
 
 void writepid()
@@ -120,12 +142,14 @@ void verifyUser(int *n,char* user[])
 
 void init()
 {
+    sb = (struct sembuf *)malloc(2*sizeof(sembuf));
     mqid = msgget(broad_key,IPC_CREAT|0666);
     asid = shmget(array_key,500,IPC_CREAT|0666);
     msid = shmget(msg_key,5000,IPC_CREAT|0666);
     semid = semget(sem_key,2,IPC_CREAT|0666);
     pidarr = (int*)shmat(asid,NULL,0);
     msgshm = (char*)shmat(msid,NULL,0);
+    semctl(semid,sem1,SETVAL,1);
     semctl(semid,sem2,SETVAL,0);
     writepid();
     for(int i=0;i<50;i++)
@@ -150,11 +174,16 @@ void tokenize(char *str,char** tok)
 char* msg[5];
 int read_message()
 {
+    printf("Stuck at sem2\n");
+    printsem(0);
     lock(sem2);
+    printsem(1);
     strcpy(buffer,msgshm);
+    printf("--- Received msg \"%s\"\n",buffer);
     unlock(sem2);
+    printsem(2);
     tokenize(buffer,msg);
-    if(!strcmp(msg[2],"."))
+    if(!strcmp(msg[0],"."))
         return 0;
     if(!strcmp(msg[2],"*"))
         return -1;
@@ -166,16 +195,19 @@ void broadcast(int expid)
     strcpy(msgmq.mtext,buffer);
     for(int i=0;i<50;i++)
     {
-        if(pidarr[i]!=-1 && pidarr[i]!=expid)
+        if(pidarr[i]!=-1)// && pidarr[i]!=expid)
         {
             msgmq.mtype = pidarr[i];
             msgsnd(mqid,&msgmq,strlen(msgmq.mtext),0);
         }
     }
+    getchar();
 }
 
-void release()
+void release(int sig)
 {
+    shmdt(pidarr);
+    shmdt(msgshm);
     msgctl(mqid,IPC_RMID,NULL);
     shmctl(asid,IPC_RMID,NULL);
     shmctl(msid,IPC_RMID,NULL);
@@ -185,19 +217,21 @@ void release()
 
 int main(int argc,char* argv[])
 {
+    signal(SIGINT,release);
     init();
     pidarr[0]=2;
     int nuser=argc;
     int result;
     char **user = &argv[1];
     verifyUser(&nuser,user);
-
+    printf("user verified\n");
     while(1)
     {
         result = read_message();
+        printf("Result %d\n",result);
         if(result==1)
             broadcast(atoi(msg[1]));
         if(result==-1)
-            release();
+            release(0);
     }
 }

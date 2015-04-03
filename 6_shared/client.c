@@ -24,7 +24,7 @@ struct message
         long mtype;
         char mtext[BUFFER_SIZE];
 };
-struct sembuf sb;
+struct sembuf *sb;
 
 char buffer[BUFFER_SIZE];
 struct message msgmq;
@@ -35,24 +35,43 @@ char *msgshm;
 
 void lock(int num)
 {
-    sb.sem_op = -1;
-    sb.sem_flg = 0;
-    sb.sem_num = num;
+    int nop;
+    sb[0].sem_flg = 0;
+    sb[0].sem_num = num;
+    sb[1].sem_flg = 0;
+    sb[1].sem_num = num;
+
+    sb[0].sem_op = -1;
+    nop = 1;
     if(num==sem2)
-        sb.sem_op = 0;
-    semop(semid, &sb, 1);
+    {
+        sb[0].sem_op = 0;
+        sb[1].sem_op = 1;
+        nop = 2;
+    }
+    semop(semid, sb, nop);
 }
 
 void unlock(int num)
 {
-    sb.sem_op = 1;
-    sb.sem_flg = 0;
-    sb.sem_num = num;
-    semop(semid, &sb, 1);
+    int nop;
+    sb[0].sem_flg = 0;
+    sb[0].sem_num = num;
+    sb[0].sem_op = 1;
+    nop=1;
+    semop(semid, sb, nop);
+}
+
+void printsem(int p)
+{
+    int a = semctl(semid,sem1,GETVAL,0);
+    int b = semctl(semid,sem2,GETVAL,0);
+    //printf("%d sem1:%d sem2:%d\n",p,a,b);
 }
 
 void init()
 {
+    sb = (struct sembuf *)malloc(2*sizeof(sembuf));
     mqid = msgget(broad_key,IPC_CREAT|0666);
     asid = shmget(array_key,500,IPC_CREAT|0666);
     msid = shmget(msg_key,5000,IPC_CREAT|0666);
@@ -78,6 +97,8 @@ void tokenize(char *str,char** tok)
 
 void release()
 {
+    shmdt(pidarr);
+    shmdt(msgshm);
     msgctl(mqid,IPC_RMID,NULL);
     shmctl(asid,IPC_RMID,NULL);
     shmctl(msid,IPC_RMID,NULL);
@@ -105,7 +126,7 @@ void release()
 void check()
 {
     if( access( "ser.txt", F_OK ) == -1 ) {
-         printf("Server not initialized.\n");
+         printf("--- Server Absent\n");
          return;
     }
 }
@@ -129,13 +150,24 @@ void send()
     flag = false;
     while(1)
     {
+        //printf("hey\n");
         if(!flag)
             sprintf(buffer,".");
         flag=false;
-
+        //printf("Stuck at sem2\n");
+        printsem(0);
+        
         lock(sem2);
+        
+        printsem(1);
+        //printf("Copying to shared variable\n");
         strcpy(msgshm,buffer);
+        //printf("Done\n");
+        
         unlock(sem2);
+        
+        printsem(2);
+        //getchar();
     }
 }
 
@@ -162,18 +194,25 @@ void receive()
     addPPID();
     while(1)
     {
-        msgrcv(mqid,&msgmq,strlen(msgmq.mtext),1,0);
+        msgrcv(mqid,&msgmq,strlen(msgmq.mtext),getpid(),0);
         printf("--- Received message: %s\n",msgmq.mtext);
     }
 }
 
+void exitall(int sig)
+{
+    //for(int i=0;i<50;i++)
+    //    kill(SIGKILL,pidarr[i]);
+    exit(0);
+}
+
 int main(int argc,char* argv[])
 {
-    signal(SIGINT,);
+    signal(SIGTSTP,exitall);
     check();
     init();
     
-    if(fork())
+    if(!fork())
         send();
     else
         receive();
