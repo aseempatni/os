@@ -138,10 +138,10 @@ void sendHandle(int sig)
     char temp[700];
     printf("<Ctrl+C is pressed>\n");
     printf("--- Enter a message:\n");
-    scanf("%s",temp);
+    scanf("%*c%[^\n]", temp);
     if(!strcmp(temp,"bye"))
         release();
-    sprintf(buffer,"%s/%d:%s",getlogin(),getppid(),temp);
+    sprintf(buffer,"%s/%d:%s",getlogin(),getpid(),temp);
 }
 
 void send()
