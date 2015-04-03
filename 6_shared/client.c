@@ -156,7 +156,7 @@ void send()
         flag=false;
         //printf("Stuck at sem2\n");
         printsem(0);
-        
+        signal(SIGINT,SIG_IGN);
         lock(sem2);
         
         printsem(1);
@@ -165,7 +165,7 @@ void send()
         //printf("Done\n");
         
         unlock(sem2);
-        
+        signal(SIGINT,sendHandle);
         printsem(2);
         //getchar();
     }
