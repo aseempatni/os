@@ -151,6 +151,7 @@ void send()
     while(1)
     {
         //printf("hey\n");
+        sleep(1);
         if(!flag)
             sprintf(buffer,".");
         flag=false;
