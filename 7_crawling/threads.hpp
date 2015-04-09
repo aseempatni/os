@@ -4,6 +4,7 @@
 #define THREAD_HH
 
 # include <pthread.h>
+#include "mutex.hpp"
 class Thread
 {
 private:

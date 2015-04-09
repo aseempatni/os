@@ -2,14 +2,23 @@
 #include "threads.hpp"
 using namespace std;
 
+#define Tthread 5
+
 queue<string> todo;
 queue<string> todonext;
 vector<pair<string,uint> > done;
 int level;
+int Nthread;
+Mutex m;
 
 void levelincrease()
 {
-
+    /*
+    Nthread++;
+    if(Nthread==Tthread)
+        m.enter();
+    else
+    */
 }
 
 class URLFetcher:public Thread
@@ -64,10 +73,11 @@ int main(int argc, char* argv[])
     // initialize
     todo.push(argv[1]);
     level = 1;
+    Nthread = 0;
     URLFetcher u[5];
     for(int i=0;i<5;i++)
         u[i].start();
-    while(1)
-    {}
+    for(int i=0;i<5;i++)
+        u[i].wait();
     return 0;
 }
