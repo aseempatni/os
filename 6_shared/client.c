@@ -204,6 +204,7 @@ void exitall(int sig)
 {
     //for(int i=0;i<50;i++)
     //    kill(SIGKILL,pidarr[i]);
+    //release();
     exit(0);
 }
 

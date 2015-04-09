@@ -205,7 +205,7 @@ void broadcast(int expid)
             msgsnd(mqid,&msgmq,strlen(msgmq.mtext),0);
         }
     }
-    //getchar();
+    getchar();
 }
 
 void release(int sig)
