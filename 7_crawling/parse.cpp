@@ -1,30 +1,25 @@
 #include "utils.hpp"
 #include "threads.hpp"
+#include "cond.hpp"
+#include <map>
 using namespace std;
 
 #define Tthread 5
 
 queue<string> todo;
 queue<string> todonext;
-vector<pair<string,uint> > done;
+map<string,uint> done;
 int level;
 int Nthread;
-Mutex m;
-
-void levelincrease()
-{
-    /*
-    Nthread++;
-    if(Nthread==Tthread)
-        m.enter();
-    else
-    */
-}
 
 class URLFetcher:public Thread
 {
 private:
+    Mutex *m;
+    Cond *c;
 public:
+    URLFetcher(Mutex *m_,Cond *c_):m(m_),c(c_)
+    {}
     vector<string> fetch(string url)
     {
         string buffer;
@@ -52,18 +47,53 @@ public:
         curl_global_cleanup();
         return vector<string>();
     }
+
+    void levelincrease1()
+    {
+        m->lock();
+        Nthread++;
+        if(Nthread==Tthread)
+        {
+            m->unlock();
+            while(!todonext.empty())
+            {
+                if(!done.count(todonext.front()))
+                    todo.push(todonext.front());
+                todonext.pop();
+            }
+            level++;
+            printf("Level: %d\n",level);
+            c->broadcast();
+        }
+        else
+            c->wait();
+    }
+
     void run()
     {
         while(1)
         {
+            m->lock();
             if(todo.empty())
-                levelincrease();
+            {
+                m->unlock();
+                printf("Thread number %u found to-do queue empty\n",id());
+                levelincrease1();
+            }
             string a = todo.front();
             todo.pop();
-            vector<string> linklist = fetch(a);
+            printf("Thread: %u Url %s\n",id(),a.c_str());
+            m->unlock();
 
+            // Time consuming part
+            vector<string> linklist = fetch(a);
+            printf("URL: %s Links Found: %d\n",a.c_str(),linklist.size());
+
+            m->lock();
+            done[a]=id();
             for(auto a:linklist)
                 todonext.push(a);
+            m->unlock();
         }
     }
 };
@@ -74,10 +104,15 @@ int main(int argc, char* argv[])
     todo.push(argv[1]);
     level = 1;
     Nthread = 0;
-    URLFetcher u[5];
-    for(int i=0;i<5;i++)
-        u[i].start();
-    for(int i=0;i<5;i++)
-        u[i].wait();
+    URLFetcher *u[Tthread];
+    Mutex m;
+    Cond c(&m);
+    for(int i=0;i<Tthread;i++)
+    {
+        u[i] = new URLFetcher(&m,&c);
+        u[i]->start();
+    }
+    for(int i=0;i<Tthread;i++)
+        u[i]->wait();
     return 0;
 }

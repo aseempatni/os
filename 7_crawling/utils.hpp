@@ -26,7 +26,6 @@ string getlinks(string buffer)
     int p[2];
     pipe(p);
     pipe(c);
-    cerr << "Calling getlinks.py " << buffer.length() << endl;
     if(!fork())
     {
         // child
