@@ -66,7 +66,7 @@ void printsem(int p)
 {
     int a = semctl(semid,sem1,GETVAL,0);
     int b = semctl(semid,sem2,GETVAL,0);
-    printf("%d sem1:%d sem2:%d\n",p,a,b);
+    //printf("%d sem1:%d sem2:%d\n",p,a,b);
 }
 
 void init()
@@ -138,10 +138,10 @@ void sendHandle(int sig)
     char temp[700];
     printf("<Ctrl+C is pressed>\n");
     printf("--- Enter a message:\n");
-    scanf("%s",temp);
+    scanf("%*c%[^\n]", temp);
     if(!strcmp(temp,"bye"))
         release();
-    sprintf(buffer,"%s/%d:%s",getlogin(),getppid(),temp);
+    sprintf(buffer,"%s/%d:%s",getlogin(),getpid(),temp);
 }
 
 void send()
@@ -151,12 +151,13 @@ void send()
     while(1)
     {
         //printf("hey\n");
+        sleep(1);
         if(!flag)
             sprintf(buffer,".");
         flag=false;
         //printf("Stuck at sem2\n");
         printsem(0);
-        
+        signal(SIGINT,SIG_IGN);
         lock(sem2);
         
         printsem(1);
@@ -165,7 +166,7 @@ void send()
         //printf("Done\n");
         
         unlock(sem2);
-        
+        signal(SIGINT,sendHandle);
         printsem(2);
         //getchar();
     }
