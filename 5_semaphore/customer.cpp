@@ -112,5 +112,5 @@ int main (int argc, char *argv[]) {
     	}
     }
 	while (wait(NULL) >0);
-	cout << "All customers done" << endl;
+	cout << "All customers done." << endl;
 }
