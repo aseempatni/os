@@ -102,8 +102,8 @@ public:
             {
                 m->unlock();
                 printf("Thread number %u found to-do queue empty\n",id());
-                //levelincrease1();
-                levelincrease2();
+                levelincrease1();
+                //levelincrease2();
             }
             string a = todo.front();
             todo.pop();

@@ -9,4 +9,7 @@ while True:
         break
 hxs = lxml.html.document_fromstring(s)
 links = hxs.xpath('//a/@href')
+for link in links
+    w  = link.split('?')[0];
+    link = w
 print ','.join(links)
