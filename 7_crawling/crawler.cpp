@@ -9,8 +9,8 @@ using namespace std;
 
 queue<string> todo;
 queue<string> todonext;
-map<string,uint> done;
-int level;
+map<string,pair<uint,int> > done;
+int level,mlevel;
 int Nthread;
 int someid;
 
@@ -35,6 +35,7 @@ public:
         if(curl)
         {
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 8L);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
@@ -45,7 +46,8 @@ public:
               fprintf(stderr, "curl_easy_perform() failed: %s\n",curl_easy_strerror(res));
             /* always cleanup */
             curl_easy_cleanup(curl);
-            linklist = getlinks(buffer);
+
+            linklist = getlinks(buffer,url);
             return split(linklist,',');
         }
         curl_global_cleanup();
@@ -68,7 +70,7 @@ public:
         Nthread++;
         if(Nthread==Tthread)
         {
-            m->unlock();
+            Nthread = 0;
             copy();
             level++;
             printf("Level: %d\n",level);
@@ -81,7 +83,6 @@ public:
     void levelincrease2()
     {
         b1->wait();
-        
         if(id()==someid)
         {
             copy();
@@ -103,19 +104,22 @@ public:
                 m->unlock();
                 printf("Thread number %u found to-do queue empty\n",id());
                 levelincrease1();
-                //levelincrease2();
+                if(level > mlevel)
+                {
+                    cout << "Coming out\n";
+                    break;
+                }
             }
             string a = todo.front();
             todo.pop();
-            printf("Thread: %u Url %s\n",id(),a.c_str());
+            printf("Deque Thread:%u URL:%s\n",id(),a.c_str());
             m->unlock();
 
             // Time consuming part
             vector<string> linklist = fetch(a);
-            printf("URL: %s Links Found: %d\n",a.c_str(),linklist.size());
 
             m->lock();
-            done[a]=id();
+            done[a]=make_pair(id(),level);
             for(auto a:linklist)
                 todonext.push(a);
             m->unlock();
@@ -126,7 +130,13 @@ public:
 int main(int argc, char* argv[])
 {
     // initialize
+    if(argc !=3)
+    {
+        printf("./crawl <url> <level>\n");
+        exit(0);
+    }
     todo.push(argv[1]);
+    mlevel = atoi(argv[2]);
     level = 1;
     Nthread = 0;
     URLFetcher *u[Tthread];
@@ -138,7 +148,18 @@ int main(int argc, char* argv[])
         u[i] = new URLFetcher(&m,&c,&b1,&b2);
         u[i]->start();
     }
+
     for(int i=0;i<Tthread;i++)
         u[i]->wait();
+
+    cout << "<depth>\t<thread>\t<url>\n";
+    for(auto a:done)
+        cout << a.second.second << " " << a.second.first << " " << a.first << endl;
+
+    while(!todo.empty())
+    {
+        cout << level << " 0 " << todo.front() << endl;
+        todo.pop();
+    }
     return 0;
 }

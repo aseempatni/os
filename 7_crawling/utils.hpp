@@ -20,7 +20,7 @@
 
 using namespace std;
 
-string getlinks(string buffer)
+string getlinks(string buffer,string url)
 {
     int c[2];
     int p[2];
@@ -41,7 +41,10 @@ string getlinks(string buffer)
     close(c[1]);
     
     char temp[BUFFER_SIZE];
-    //buffer="href=\"mailto:webmaster@cse.iitkgp.ernet.in\"      ad'm''f'ksdkfklasdcf       href=\"maaasdilto:webmaster@cse.iitkgp.ernet.in\"  asda          asdasd";
+    url += "\n";
+    strcpy(temp,url.c_str());
+    write(p[1],temp,url.length());
+
     buffer+="\nENDFILE\n";
     strcpy(temp,buffer.c_str());
     write(p[1],temp,sizeof(temp));
