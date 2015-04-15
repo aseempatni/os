@@ -107,7 +107,7 @@ public:
                 if(level > mlevel)
                 {
                     cout << "Coming out\n";
-                    break;
+                    pthread_exit(NULL);
                 }
             }
             string a = todo.front();
