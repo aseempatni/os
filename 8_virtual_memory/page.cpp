@@ -35,9 +35,9 @@ int fifo(string reference_string, int nframes) {
     }
     for(i=0; i<vint.size(); i++) {
         if(find(v.begin(), v.end(),vint[i]) != v.end()) {
-            /* v contains x */
+            /* Page already present */
         } else {
-            /* v does not contain x */
+            /* v Page fault */
             if(v.size()==nframes) {
                 v.erase(v.begin());
             }
@@ -62,10 +62,10 @@ int lru(string reference_string, int nframes) {
         std::vector<int>::iterator it;
         it = find(v.begin(), v.end(),vint[i]);
         if(it != v.end()) {
-            /* v contains x */
+            /* Page already present */
             v.erase(it);
         } else {
-            /* v does not contain x */
+            /* v Page fault */
             if(v.size()==nframes) {
                 v.erase(v.begin());
             }
@@ -109,7 +109,7 @@ int lfu (string reference_string, int nframes) {
             }
         }
         if (found==0) {
-            // not already present
+            // Page fault
             page_fault++;
             if(loaded_pages.size() == nframes) {
                 vector<lfu_struct>::iterator nth = loaded_pages.begin() + min_freq_index;
@@ -136,20 +136,21 @@ int second_chance (string reference_string, int nframes) {
         std::vector<int>::iterator it;
         it = find(v.begin(), v.end(),vint[i]);
         if(it != v.end()) {
-            /* v contains x */
+            /* v Page already present */
             reference_bit[it-v.begin()] =true;
         } else {
-            /* v does not contain x */
+            /* Page fault */
             if(v.size()==nframes) {
                 for(int i=0; i<v.size(); i++) {
+                    // Give second chance
                     if (reference_bit[i]==true) reference_bit[i] = false;
-                    else {
+                    else { // Remove page
                         v.erase(v.begin()+i);
                         reference_bit.erase(reference_bit.begin()+i);
                         break;
                     }
                 }
-                if(it==v.end()) {
+                if(it==v.end()) { // all pages given second chance, so remove the first page
                     v.erase(v.begin());
                     reference_bit.erase(reference_bit.begin());
                 }
@@ -183,7 +184,6 @@ int main() {
     cout << "d = ";
     cin >> d;
     string s = generate_reference_string(n,d);
-    //cout << s;
     int no_of_frames, fault_count;
     int i;
     cout << endl;
