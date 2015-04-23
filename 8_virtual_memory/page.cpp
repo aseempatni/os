@@ -183,7 +183,7 @@ int main() {
     cin >> n;
     cout << "d = ";
     cin >> d;
-    string s = generate_reference_string(n,d);
+    string reference_string = generate_reference_string(n,d);
     int no_of_frames, fault_count;
     int i;
     cout << endl;
@@ -191,26 +191,25 @@ int main() {
     for(i=1; i<3*n*n/d+d; i++) {
         no_of_frames = i;
         cout << i << "\t";
-        fault_count = fifo(s,no_of_frames);
+        fault_count = fifo(reference_string, no_of_frames);
         cout << fault_count << "\t";
-        fault_count = lru(s,no_of_frames);
+        fault_count = lru(reference_string, no_of_frames);
         cout << fault_count << "\t";
-        fault_count = lfu(s,no_of_frames);
+        fault_count = lfu(reference_string, no_of_frames);
         cout << fault_count << "\t";
-        fault_count = second_chance(s,no_of_frames);
+        fault_count = second_chance(reference_string, no_of_frames);
         cout << fault_count << "\t";
         cout << endl;
     }
-/*    while (1) {
-        cout << endl << "Select a page replacement algorithm." << endl;
-        cout << "No of frames: ";
-        cin >> no_of_frames;
-        fault_count = fifo(s,no_of_frames);
-        cout << fault_count << endl;
-        fault_count = lru(s,no_of_frames);
-        cout << fault_count << endl;
+    // while (1) {
+    //     cout << endl << "Select a page replacement algorithm." << endl;
+    //     cout << "No of frames: ";
+    //     cin >> no_of_frames;
+    //     fault_count = fifo(s,no_of_frames);
+    //     cout << fault_count << endl;
+    //     fault_count = lru(s,no_of_frames);
+    //     cout << fault_count << endl;
 
-        //getchar();
-    }
-*/
+    //     //getchar();
+    // }
 }
