@@ -175,19 +175,20 @@ char* msg[5];
 char orig_message[BUFFER_SIZE];
 int read_message()
 {
-    printf("Stuck at sem2\n");
+    //printf("Stuck at sem2\n");
     printsem(0);
     lock(sem2);
     printsem(1);
     strcpy(buffer,msgshm);
-    printf("--- Received message \"%s\"\n",buffer);
+    if(strcmp(buffer,"."))
+        printf("--- Received message \"%s\"\n",buffer);
     unlock(sem2);
     printsem(2);
     strcpy(orig_message,buffer);
     tokenize(buffer,msg);
     if(!strcmp(msg[0],"."))
         return 0;
-    if(!strcmp(msg[2],"*"))
+    if(!strcmp(msg[0],"*"))
         return -1;
     return 1;
 }
@@ -205,22 +206,31 @@ void broadcast(int expid)
             msgsnd(mqid,&msgmq,strlen(msgmq.mtext),0);
         }
     }
-    getchar();
+    //getchar();
 }
 
 void release(int sig)
-{
+{    
     shmdt(pidarr);
+    
     shmdt(msgshm);
-    msgctl(mqid,IPC_RMID,NULL);
+    
     shmctl(asid,IPC_RMID,NULL);
+    
     shmctl(msid,IPC_RMID,NULL);
+    
     semctl(semid,0,IPC_RMID,0);
+    printf("Server Exit\n");
     exit(0);
 }
 
 int main(int argc,char* argv[])
 {
+    if(argc < 2)
+    {
+        printf("./server <user-list>\n");
+        exit(0);
+    }
     signal(SIGINT,release);
     init();
     int nuser=argc;
@@ -231,7 +241,7 @@ int main(int argc,char* argv[])
     while(1)
     {
         result = read_message();
-        printf("Result %d\n",result);
+        //printf("Result %d\n",result);
         //getchar();
         if(result==1)
             broadcast(atoi(msg[1]));

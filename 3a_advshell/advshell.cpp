@@ -269,7 +269,7 @@ void execute(char** args)
                 printf("%s doesn't exists\n",input_file);
                 exit(-1);
             }
-            FILE *f = fopen(input_file,"r");
+            FILE *f = fopen(input_file,"r+");
             if(dup2(fileno(f), fileno(stdin))<0)
             {
                 printf("Error: swapping file\n");
@@ -281,13 +281,8 @@ void execute(char** args)
 
         if(output_file!=NULL)
         {
-            if( access(output_file, F_OK ) == -1 )
-            {
-                printf("%s doesn't exists\n",output_file);
-                exit(-1);
-            }
-            FILE *f = fopen(output_file,"w");
-            if(dup2(fileno(f), fileno(stdin))<0)
+            FILE *f = fopen(output_file,"w+");
+            if(dup2(fileno(f), fileno(stdout))<0)
             {
                 printf("Error: swapping file\n");
                 exit(-1);

@@ -85,13 +85,13 @@ int main () {
                case ROCK: dscore++; break;
             }
             break;
-            case PAPER: 
+            case PAPER:
             switch (read_d) {
                case SCISSOR: dscore++; break;
                case ROCK: cscore++; break;
             }
             break;
-            case ROCK: 
+            case ROCK:
             switch (read_d) {
                case SCISSOR: cscore++;break;
                case PAPER: dscore++; break;

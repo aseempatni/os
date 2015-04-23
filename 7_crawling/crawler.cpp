@@ -71,6 +71,7 @@ public:
         if(Nthread==Tthread)
         {
             Nthread = 0;
+            m->unlock();
             copy();
             level++;
             printf("Level: %d\n",level);
@@ -103,8 +104,8 @@ public:
             {
                 m->unlock();
                 printf("Thread number %u found to-do queue empty\n",id());
-                levelincrease1();
-                if(level > mlevel)
+                levelincrease2();
+                if(level > mlevel || todo.empty())
                 {
                     cout << "Coming out\n";
                     pthread_exit(NULL);

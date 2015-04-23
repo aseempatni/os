@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <fcntl.h>
 #include <utmp.h>
@@ -32,6 +33,7 @@ key_t broad_key=31,array_key=32,msg_key=33,sem_key=34;
 int mqid,asid,msid,semid;
 int* pidarr;
 char *msgshm;
+int pid;
 
 void lock(int num)
 {
@@ -97,29 +99,39 @@ void tokenize(char *str,char** tok)
 
 void release()
 {
-    shmdt(pidarr);
-    shmdt(msgshm);
-    msgctl(mqid,IPC_RMID,NULL);
-    shmctl(asid,IPC_RMID,NULL);
-    shmctl(msid,IPC_RMID,NULL);
-    semctl(semid,0,IPC_RMID,0);
-    int idx,count=0;
+    //printf("cpid %d\n",pid);
+    printf("Client Exit\n");
+    int status;
+    
+    sleep(1);
+    int idx=0,count=0;
     lock(sem1);
     for(int i=0;i<50;i++)
+    {
         if(pidarr[i]!=-1)
         {
             count++;
-            if(pidarr[i]==getppid())
+            printf("cc %d\n",pidarr[i]);
+            if(pidarr[i]==getpid())
+            {
                 idx = i;
+            }
         }
+    }
+    printf("idx %d\n",idx);
+    pidarr[idx]=-1;
+    shmdt(pidarr);
     unlock(sem1);
     strcpy(buffer,"*");
+    printf("Count %d\n",count);
     if(count==1)
     {
         lock(sem2);
         strcpy(msgshm,buffer);
         unlock(sem2);
     }
+    shmdt(msgshm);
+    wait(&status);
     exit(0);
 }
 
@@ -138,7 +150,8 @@ void sendHandle(int sig)
     char temp[700];
     printf("<Ctrl+C is pressed>\n");
     printf("--- Enter a message:\n");
-    scanf("%*c%[^\n]", temp);
+    fflush(stdin);
+    scanf("\n%[^\n]s",temp);
     if(!strcmp(temp,"bye"))
         release();
     sprintf(buffer,"%s/%d:%s",getlogin(),getpid(),temp);
@@ -179,25 +192,22 @@ void addPPID()
     for(int i=0;i<50;i++)
         if(pidarr[i]==-1)
         {
+            printf("index %d\n",i);
             pidarr[i]=getppid();
             break;
         }
     unlock(sem1);
 }
 
-void ignore(int sig)
-{
-    return ;
-}
-
 void receive()
 {
-    signal(SIGINT,ignore);
+    signal(SIGINT,SIG_IGN);
     addPPID();
+
     while(1)
     {
         msgrcv(mqid,&msgmq,sizeof(msgmq.mtext),getppid(),0);
-        printf("--- Received message: %s\n",msgmq.mtext);
+        printf("--- Received message: %d a%sa\n",pid,msgmq.mtext);
     }
 }
 
@@ -206,6 +216,7 @@ void exitall(int sig)
     //for(int i=0;i<50;i++)
     //    kill(SIGKILL,pidarr[i]);
     //release();
+    //printf("hey kill");
     exit(0);
 }
 
@@ -214,9 +225,12 @@ int main(int argc,char* argv[])
     signal(SIGTSTP,exitall);
     check();
     init();
-    
-    if(fork())
+    pid = fork();
+    //printf("pid %d\n",pid);
+    if(pid)
         send();
     else
+    {
         receive();
+    }
 }
