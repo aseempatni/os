@@ -33,6 +33,7 @@ plt.title("Page Replacement")
 plt.xlabel("No of frames")
 plt.ylabel("Page Faults")
 plt.legend(handler_map={a: HandlerLine2D(numpoints=4)})
+
 # save and show plot
 plt.savefig(input_file_name)
 plt.show()
